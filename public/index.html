@@ -45,6 +45,7 @@
         <li class="list-group-item">Max Response Time: <mark><span id="maxResponseTime">N/A</span> ms</mark></li>
         <li class="list-group-item">Total Packets Lost: <mark><span id="packetsLost">0</span></mark></li>
         <li class="list-group-item">Total Pings: <mark><span id="totalPingsSent">0</span></mark></li>
+        <li class="list-group-item">Duration: <mark><span id="duration">0:00</span></mark></li>        
       <li class="list-group-item">
       <div class="mt-4">
         <canvas id="pingChart"></canvas>
@@ -70,6 +71,7 @@
   let maxResponseTime = 0;
   let successfulPingCount = 0;
   let totalPingsSent = 0;
+  let startTime = null;
 
   const ipAddressInput = document.getElementById('ipAddress');
   const startButton = document.getElementById('startButton');
@@ -83,11 +85,13 @@
   const results = document.getElementById('results');
   const maxResponseTimeSpan = document.getElementById('maxResponseTime');
   const totalPingsSentSpan = document.getElementById('totalPingsSent');
+  const durationSpan = document.getElementById('duration');  
 
   const pingChart = new Chart(pingChartCanvas.getContext('2d'), {
     type: 'line',
     options: {
       responsive: true,
+      maintainAspectRatio: false,
     },
     data: {
       labels: [],
@@ -97,7 +101,7 @@
           data: [],
           borderColor: '#36A2EB',
           backgroundColor: '#9BD0F5',          
-          fill: true,
+          fill: false,
         },
         {
           label: 'Packet Loss',
@@ -141,6 +145,19 @@
   });
 
   socket.on('pingData', (data) => {
+    if (!startTime) {
+      startTime = new Date().getTime(); // Start the timer when the first ping is received
+    }
+
+    // Calculate the elapsed time
+    const currentTime = new Date().getTime();
+    const elapsedTime = currentTime - startTime;
+    const minutes = Math.floor(elapsedTime / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+
+    // Format and display the elapsed time
+    durationSpan.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    
     totalPingsSent++;
     totalPingsSentSpan.textContent = totalPingsSent;    
     if (data.alive) {
