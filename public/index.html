@@ -92,6 +92,10 @@
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      elements: 
+      { 
+        point: { radius: 0 } 
+      }
     },
     data: {
       labels: [],
@@ -101,7 +105,7 @@
           data: [],
           borderColor: '#36A2EB',
           backgroundColor: '#9BD0F5',          
-          fill: false,
+          fill: true,
         },
         {
           label: 'Packet Loss',
