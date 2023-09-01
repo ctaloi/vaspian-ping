@@ -1,5 +1,5 @@
 {
-  "name": "ping-monitor-app",
+  "name": "vaspian-ping",
   "version": "1.0.0",
   "description": "A simple ping monitoring application",
   "main": "server.js",
