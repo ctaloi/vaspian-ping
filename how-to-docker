@@ -1,0 +1,4 @@
+docker build -t vaspian-ping-app .
+docker run -p 3000:3000 -d vaspian-ping-app
+
+

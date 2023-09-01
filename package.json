@@ -1,0 +1,15 @@
+{
+  "name": "ping-monitor-app",
+  "version": "1.0.0",
+  "description": "A simple ping monitoring application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^4.0.1",
+    "chart.js": "^3.7.0",
+    "ping": "^0.4.4"
+  }
+}

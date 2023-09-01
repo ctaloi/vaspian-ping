@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Latency and Packet Loss</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <div class="jumbotron jumbotron-fluid">
+    <div class="container">
+      <h1 class="mt-4"></i>Latency and Packet Loss</h1>
+      <h2> <i class="bi bi-wifi"> </i><small class="text-muted">Measured From the Vaspian Data Center</small></h2>
+      
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="mt-4">
+      <p>Ping and packet loss are crucial factors for VoIP (Voice over Internet Protocol) calls. VoIP calls rely on real-time communication, and both ping and packet loss can significantly impact call quality.</p>
+      <ul>
+        <li>This tool measures the latency and packet loss from the Vaspian data center in Buffalo NY.</li>
+        <li><strong>Ping (Latency):</strong> Low ping values (short latency) ensure that there is minimal delay between speaking and hearing on a VoIP call.</li>
+        <li><strong>Packet Loss:</strong> Packet loss can result in gaps or distortion in the audio, leading to reduced call quality and understanding.</li>
+      </ul>
+    </div>
+
+    <form id="pingForm" class="mt-4">
+      <div class="form-group">      
+        <input type="text" class="form-control form-control-lg" id="ipAddress" placeholder="Enter IP Address">
+      </div>
+      <button id="startButton" class="btn btn-outline-primary">Start Ping</button>
+      <button id="stopButton" class="btn btn-outline-danger" hidden>Stop Ping</button>
+      <button id="reloadButton" class="btn btn-outline-secondary" hidden>Reload</button>      
+    </form>
+
+    <div id="results" class="mt-4" hidden>
+      <ul class="list-group">
+        <li class="list-group-item">IP Address: <span id="ipAddressInput"></span></li>
+        <li class="list-group-item">Average Response Time: <mark><span id="averageResponseTime">N/A</span> ms</mark></li>        
+        <li class="list-group-item">Max Response Time: <mark><span id="maxResponseTime">N/A</span> ms</mark></li>
+        <li class="list-group-item">Total Packets Lost: <mark><span id="packetsLost">0</span></mark></li>
+        <li class="list-group-item">Total Pings: <mark><span id="totalPingsSent">0</span></mark></li>
+      <li class="list-group-item">
+      <div class="mt-4">
+        <canvas id="pingChart"></canvas>
+      </div>
+      <li class="list-group-item">
+        <button id="downloadChart" class="btn btn-outline-secondary" hidden>Download Chart</button>
+      </li>
+    </li>
+    </ul>
+
+
+      <br>
+      <br>
+
+    </div>
+  </div>
+
+
+<script>
+  const socket = io();
+  let totalResponseTime = 0;
+  let totalPacketsLost = 0;
+  let maxResponseTime = 0;
+  let successfulPingCount = 0;
+  let totalPingsSent = 0;
+
+  const ipAddressInput = document.getElementById('ipAddress');
+  const startButton = document.getElementById('startButton');
+  const stopButton = document.getElementById('stopButton');
+  const reloadButton = document.getElementById('reloadButton');
+  const pingForm = document.getElementById('pingForm');
+  const pingChartCanvas = document.getElementById('pingChart');
+  const averageResponseTimeSpan = document.getElementById('averageResponseTime');
+  const packetsLostSpan = document.getElementById('packetsLost');
+  const downloadButton = document.getElementById('downloadChart');
+  const results = document.getElementById('results');
+  const maxResponseTimeSpan = document.getElementById('maxResponseTime');
+  const totalPingsSentSpan = document.getElementById('totalPingsSent');
+
+  const pingChart = new Chart(pingChartCanvas.getContext('2d'), {
+    type: 'line',
+    options: {
+      responsive: true,
+    },
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: 'Response Time (ms)',
+          data: [],
+          borderColor: '#36A2EB',
+          backgroundColor: '#9BD0F5',          
+          fill: true,
+        },
+        {
+          label: 'Packet Loss',
+          data: [],
+          borderColor: '#FF6384',
+          backgroundColor: '#FFB1C1',
+          fill: true,
+        },
+      ],
+    },
+  });
+
+  startButton.addEventListener('click', () => {
+    const ipAddress = ipAddressInput.value;
+    if (ipAddress) {
+      socket.emit('startPing', ipAddress);
+      document.getElementById("ipAddressInput").innerHTML = ipAddress;
+      startButton.disabled = true;
+      startButton.hidden = true;
+      stopButton.hidden = false;
+      results.hidden = false;
+      ipAddressInput.disabled = true;
+      downloadButton.hidden = false;      
+    }
+  });
+
+  stopButton.addEventListener('click', () => {
+    socket.disconnect();
+    startButton.hidden = true;
+    stopButton.disabled = true;
+    stopButton.hidden = true;
+    reloadButton.hidden = false;
+    downloadButton.style.display = 'block';
+  });
+
+  downloadButton.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'ping_chart.png';
+    link.href = pingChartCanvas.toDataURL('image/png');
+    link.click();
+  });
+
+  socket.on('pingData', (data) => {
+    totalPingsSent++;
+    totalPingsSentSpan.textContent = totalPingsSent;    
+    if (data.alive) {
+      const responseTime = data.time.toFixed(2);
+      averageResponseTimeSpan.textContent = responseTime;
+      maxResponseTime = Math.max(maxResponseTime, data.time); // Update max response time
+      maxResponseTimeSpan.textContent = maxResponseTime.toFixed(2); // Update max response time element
+    } else {
+      totalPacketsLost++; // Increase total packets lost count
+      packetsLostSpan.textContent = totalPacketsLost; // Update packets lost element
+    }
+    pingChart.data.labels.push('');
+    pingChart.data.datasets[0].data.push(data.time);
+    pingChart.data.datasets[1].data.push(data.alive ? 0 : 1);
+    pingChart.update();
+  });
+
+
+</script>
+
+
+</body>
+</html>
